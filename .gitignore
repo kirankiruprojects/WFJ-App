@@ -1,0 +1,4 @@
+node_modules/
+synced/
+*.log
+.DS_Store
