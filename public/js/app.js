@@ -15,10 +15,47 @@
   }
   const loadSchema = () => api('/api/schema');
   const loadIndex = () => api('/api/submissions');
-  const loadSubmission = (id) => api('/api/submissions/' + id);
-  const createSubmission = (type) => api('/api/submissions', { method: 'POST', body: JSON.stringify({ type, status: 'draft' }) });
-  const patchSubmission = (id, patch) => api('/api/submissions/' + id, { method: 'PUT', body: JSON.stringify(patch) });
-  const removeSubmissionApi = (id) => api('/api/submissions/' + id, { method: 'DELETE' });
+  const loadSubmission = async (id) => {
+    if (state.isOffline) {
+      const stored = localStorage.getItem('wfj_sub_' + id);
+      return stored ? JSON.parse(stored) : { id, type: 'crf', header: {}, body: {}, tasks: [] };
+    }
+    return api('/api/submissions/' + id);
+  };
+  const createSubmission = async (type) => {
+    if (state.isOffline) {
+      const id = Date.now();
+      const newSub = { id, type, status: 'draft', client: 'New Client', broker: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), header: {}, body: {}, tasks: [] };
+      localStorage.setItem('wfj_sub_' + id, JSON.stringify(newSub));
+      state.index.unshift(newSub);
+      localStorage.setItem('wfj_offline_index', JSON.stringify(state.index));
+      return newSub;
+    }
+    return api('/api/submissions', { method: 'POST', body: JSON.stringify({ type, status: 'draft' }) });
+  };
+  const patchSubmission = async (id, patch) => {
+    if (state.isOffline) {
+      const stored = localStorage.getItem('wfj_sub_' + id);
+      let sub = stored ? JSON.parse(stored) : { id };
+      Object.assign(sub, patch);
+      sub.updated_at = new Date().toISOString();
+      localStorage.setItem('wfj_sub_' + id, JSON.stringify(sub));
+      const idxItem = state.index.find(x => String(x.id) === String(id));
+      if (idxItem) Object.assign(idxItem, patch);
+      localStorage.setItem('wfj_offline_index', JSON.stringify(state.index));
+      return sub;
+    }
+    return api('/api/submissions/' + id, { method: 'PUT', body: JSON.stringify(patch) });
+  };
+  const removeSubmissionApi = async (id) => {
+    if (state.isOffline) {
+      localStorage.removeItem('wfj_sub_' + id);
+      state.index = state.index.filter(x => String(x.id) !== String(id));
+      localStorage.setItem('wfj_offline_index', JSON.stringify(state.index));
+      return { success: true };
+    }
+    return api('/api/submissions/' + id, { method: 'DELETE' });
+  };
 
   function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function fmtDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return d; } }
@@ -1372,7 +1409,36 @@
   // ---------------- Boot ----------------
 
   async function init() {
-    [schema, state.index] = await Promise.all([loadSchema(), loadIndex()]);
+    try {
+      [schema, state.index] = await Promise.all([loadSchema(), loadIndex()]);
+    } catch (err) {
+      console.warn('Backend server not reachable, using offline preview mode:', err);
+      state.isOffline = true;
+      if (typeof TERMINATION_SECTIONS !== 'undefined') {
+        schema = {
+          TERMINATION_SECTIONS,
+          CRF_SECTIONS,
+          CATEGORY_MATRIX,
+          CATEGORY_OPTIONS,
+          TRACKING_FIELDS,
+          TEAM_NAMES: typeof TEAM_NAMES !== 'undefined' ? TEAM_NAMES : [],
+          IMPLEMENTATION_FIELDS,
+          TERMINATION_EXTRA_FIELDS,
+          TEAMS: [],
+          STAGES: [
+            { key: 'requested', label: 'Requested' },
+            { key: 'in_progress', label: 'In Progress' },
+            { key: 'review', label: 'In Review' },
+            { key: 'completed', label: 'Completed' }
+          ]
+        };
+      }
+      try {
+        state.index = JSON.parse(localStorage.getItem('wfj_offline_index') || '[]');
+      } catch (e) {
+        state.index = [];
+      }
+    }
     render();
   }
   init();
