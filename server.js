@@ -1766,8 +1766,15 @@ app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.
 
 app.listen(PORT, () => { 
   console.log(`Workforce Junction app running on http://localhost:${PORT}`);
-  // Sync tracker files on boot
-  updateTrackerExcel('crf');
-  updateTrackerExcel('implementation');
-  updateTrackerExcel('termination');
+  // On cloud (Railway), skip boot-time Excel sync to avoid OOM.
+  // Excel files will be regenerated on first data change.
+  const isCloud = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.FLY_APP_NAME);
+  if (!isCloud) {
+    // Defer local boot sync by 10s so server accepts requests first
+    setTimeout(() => {
+      updateTrackerExcel('crf');
+      updateTrackerExcel('implementation');
+      updateTrackerExcel('termination');
+    }, 10000);
+  }
 });
