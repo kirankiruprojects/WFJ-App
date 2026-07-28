@@ -255,7 +255,7 @@
     document.getElementById('nav-backdrop').addEventListener('click', closeMobileNav);
     
     // Notifications Logic
-    const requestedItems = state.index.filter(x => x.status === 'requested');
+    const requestedItems = state.dismissedNotifs ? [] : state.index.filter(x => x.status === 'requested');
     const notifBadge = document.getElementById('notif-badge');
     const notifDropdown = document.getElementById('notif-dropdown');
     const notifList = document.getElementById('notif-list');
@@ -263,6 +263,8 @@
     if (requestedItems.length > 0) {
       notifBadge.textContent = requestedItems.length;
       notifBadge.style.display = 'block';
+    } else {
+      notifBadge.style.display = 'none';
     }
     
     notifList.innerHTML = requestedItems.length === 0 ? '<div class="notif-empty">No new requests</div>' : requestedItems.map(r => `
@@ -279,9 +281,9 @@
     
     document.getElementById('notif-clear').addEventListener('click', (e) => {
       e.stopPropagation();
+      state.dismissedNotifs = true;
       notifDropdown.classList.remove('open');
-      notifBadge.style.display = 'none';
-      notifList.innerHTML = '<div class="notif-empty">No new requests</div>';
+      render();
     });
     
     notifList.querySelectorAll('[data-notif-open]').forEach(el => el.addEventListener('click', (e) => {
@@ -1360,97 +1362,70 @@
 
   // ---------------- Notifications ----------------
 
-  async function renderNotifications(main) {
-    main.innerHTML = `<div style="display:flex;justify-content:center;padding:60px;"><div class="spinner"></div></div>`;
-    let logs = [];
-    try {
-      logs = await api('/api/notifications');
-    } catch (e) {
-      main.innerHTML = `<div class="empty-state">Failed to load notifications: ${esc(e.message)}</div>`;
-      return;
-    }
-
-    function fmtRelTime(iso) {
-      if (!iso) return '—';
-      const diff = Date.now() - new Date(iso).getTime();
-      const mins = Math.floor(diff / 60000);
-      if (mins < 1) return 'just now';
-      if (mins < 60) return mins + 'm ago';
-      const hrs = Math.floor(mins / 60);
-      if (hrs < 24) return hrs + 'h ago';
-      return Math.floor(hrs / 24) + 'd ago';
-    }
-
-    function subjectIcon(subject) {
-      if (!subject) return '📧';
-      if (subject.toLowerCase().includes('approved')) return '✅';
-      if (subject.toLowerCase().includes('testing')) return '🔍';
-      if (subject.toLowerCase().includes('completed')) return '🎉';
-      if (subject.toLowerCase().includes('assigned')) return '👤';
-      return '📧';
-    }
+  function renderNotifications(main) {
+    const requestedItems = state.dismissedNotifs ? [] : state.index.filter(x => x.status === 'requested');
 
     main.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
         <div>
-          <div style="font-weight:700;font-size:20px;font-family:'Space Grotesk',sans-serif;">Notifications — Email Activity Log</div>
-          <div class="hint">${logs.length} notification${logs.length === 1 ? '' : 's'} recorded</div>
+          <div style="font-weight:700;font-size:20px;font-family:'Space Grotesk',sans-serif;">Notifications — Recent Requests</div>
+          <div class="hint">${requestedItems.length} active request notification${requestedItems.length === 1 ? '' : 's'}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="text" id="notif-search" placeholder="Search notifications…" class="form-control" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;width:240px;">
+          ${requestedItems.length > 0 ? `<button class="btn btn-ghost btn-sm" id="tab-notif-clear">Dismiss All</button>` : ''}
         </div>
       </div>
 
-      ${logs.length === 0 ? `
+      ${requestedItems.length === 0 ? `
         <div class="empty-state" style="padding:60px 24px;">
           <div style="font-size:40px;margin-bottom:12px;">🔔</div>
-          <div style="font-weight:600;font-size:16px;margin-bottom:6px;">No notifications yet</div>
-          <div class="hint">Notifications appear here when status changes or tasks are assigned.</div>
+          <div style="font-weight:600;font-size:16px;margin-bottom:6px;">No new notifications</div>
+          <div class="hint">When new requests or changes are submitted, they will appear here and in the bell icon.</div>
         </div>
       ` : `
-        <div id="notif-feed" style="display:flex;flex-direction:column;gap:10px;">
-          ${logs.map(log => `
-            <div class="notif-card" data-notif-body="${esc(log.body || '')}" style="
+        <div id="notif-feed" style="display:flex;flex-direction:column;gap:12px;">
+          ${requestedItems.map(r => `
+            <div class="notif-card" data-notif-open="${r.id}" style="
               background:var(--surface);border:1px solid var(--border);border-radius:12px;
-              padding:14px 18px;box-shadow:var(--shadow);cursor:pointer;
+              padding:16px 20px;box-shadow:var(--shadow);cursor:pointer;
               border-left:4px solid var(--accent);transition:box-shadow 0.15s,transform 0.12s;
+              display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
             ">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-                <div style="display:flex;gap:12px;align-items:flex-start;flex:1;min-width:0;">
-                  <div style="font-size:22px;flex-shrink:0;line-height:1;">${subjectIcon(log.subject)}</div>
-                  <div style="flex:1;min-width:0;">
-                    <div style="font-weight:600;font-size:13.5px;color:var(--ink);margin-bottom:3px;">${esc(log.subject || '(no subject)')}</div>
-                    <div style="font-size:12px;color:var(--ink-soft);">To: ${esc(log.to_email || '—')}</div>
-                  </div>
-                </div>
-                <div style="font-size:11px;color:var(--ink-faint);white-space:nowrap;flex-shrink:0;">
-                  ${fmtRelTime(log.sent_at)}<br>
-                  <span style="font-size:10px;">${fmtDate(log.sent_at)}</span>
+              <div style="display:flex;gap:14px;align-items:center;flex:1;min-width:200px;">
+                <span class="subcard-type ${typeBadgeClass(r.type)}" style="margin:0;">${typeLabelOf(r.type)}</span>
+                <div>
+                  <div style="font-weight:600;font-size:14.5px;color:var(--ink);">${esc(r.client || 'Untitled Client')}</div>
+                  <div style="font-size:12px;color:var(--ink-soft);">${r.broker ? 'Broker: ' + esc(r.broker) : 'No broker specified'}</div>
                 </div>
               </div>
-              <div class="notif-body-preview" style="
-                display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
-                font-size:12.5px;color:var(--ink-soft);white-space:pre-wrap;line-height:1.55;
-                background:var(--surface-alt);border-radius:6px;padding:10px 12px;
-              ">${esc(log.body || '')}</div>
+              <div style="display:flex;align-items:center;gap:14px;">
+                <span class="stagepill-table stage-${r.status || 'requested'}">${stageLabelOf(r.status)}</span>
+                <div style="font-size:11.5px;color:var(--ink-faint);text-align:right;">
+                  Updated: ${fmtDate(r.updatedAt)}
+                </div>
+                <button class="btn btn-primary btn-sm" style="pointer-events:none;">Open</button>
+              </div>
             </div>
           `).join('')}
         </div>
       `}
     `;
 
-    // Toggle body on click
-    main.querySelectorAll('.notif-card').forEach(card => {
+    // Click card to open submission
+    main.querySelectorAll('[data-notif-open]').forEach(card => {
       card.addEventListener('click', () => {
-        const preview = card.querySelector('.notif-body-preview');
-        if (preview) {
-          const isOpen = preview.style.display !== 'none';
-          preview.style.display = isOpen ? 'none' : 'block';
-          card.style.boxShadow = isOpen ? '' : '0 4px 18px rgba(108,92,231,0.15)';
-          card.style.transform = isOpen ? '' : 'translateY(-1px)';
-        }
+        openSubmission(card.dataset.notifOpen);
       });
     });
+
+    const tabClearBtn = main.querySelector('#tab-notif-clear');
+    if (tabClearBtn) {
+      tabClearBtn.addEventListener('click', () => {
+        state.dismissedNotifs = true;
+        render();
+      });
+    }
 
     // Search filter
     const searchInput = main.querySelector('#notif-search');
@@ -1579,11 +1554,6 @@
           <div style="font-weight:700;font-size:20px;font-family:'Space Grotesk',sans-serif;">Tracker — View-Only Records</div>
           <div class="hint">All records including deleted (shown with strikethrough). No editing from this view.</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <a href="/api/export-excel/crf" target="_blank" class="btn btn-ghost btn-sm">⬇ Download CRF Excel</a>
-          <a href="/api/export-excel/implementation" target="_blank" class="btn btn-ghost btn-sm">⬇ Download Impl. Excel</a>
-          <a href="/api/export-excel/termination" target="_blank" class="btn btn-ghost btn-sm">⬇ Download Term. Excel</a>
-        </div>
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
@@ -1594,7 +1564,7 @@
 
       <div style="background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
         <span style="font-size:16px;">👁</span>
-        <span style="font-size:12.5px;color:var(--ink-soft);">This is a <strong>view-only</strong> snapshot. Deleted records are highlighted in yellow with strikethrough. Use the Download buttons to export the full Excel tracker file.</span>
+        <span style="font-size:12.5px;color:var(--ink-soft);">This is a <strong>view-only</strong> snapshot. Deleted records are retained and highlighted with strikethrough.</span>
       </div>
 
       <div id="tracker-table-area">

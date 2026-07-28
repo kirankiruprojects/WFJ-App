@@ -12,8 +12,13 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const PORT = process.env.PORT || 3000;
-const DOCUMENTS_DIR = path.join(__dirname, 'Document');
-const DB_PATH = path.join(__dirname, 'data.db');
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DOCUMENTS_DIR = path.join(DATA_DIR, 'Document');
+const DB_PATH = process.env.SQLITE_DB_PATH || path.join(__dirname, 'data.db');
+// Ensure data directories exist (important for Railway volumes)
+[DOCUMENTS_DIR, path.join(DATA_DIR, 'synced'), path.join(DATA_DIR, 'tracker')].forEach(d => {
+  try { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); } catch(e) {}
+});
 
 const app = express();
 app.use(cors());
@@ -229,13 +234,13 @@ const TEMPLATE_IMPL_TERM = path.join(DOCUMENTS_DIR, '2026_Client Implemented and
 const MASTER_CRF       = TEMPLATE_CRF;
 const MASTER_IMPL_TERM = TEMPLATE_IMPL_TERM;
 // SYNC_ = working copies that are written on every data change
-const SYNC_DIR      = path.join(__dirname, 'synced');
+const SYNC_DIR      = path.join(DATA_DIR, 'synced');
 const SYNC_CRF       = path.join(SYNC_DIR, 'CRF Config Master Tracker (Synced).xlsx');
 const SYNC_IMPL_TERM = path.join(SYNC_DIR, '2026_Client Implemented and Terminated (Synced).xlsx');
 if (!fs.existsSync(SYNC_DIR)) fs.mkdirSync(SYNC_DIR, { recursive: true });
 
 // TRACKER_ = auto-updated files in tracker/ folder (never deleted records are highlighted, not removed)
-const TRACKER_DIR      = path.join(__dirname, 'tracker');
+const TRACKER_DIR      = path.join(DATA_DIR, 'tracker');
 const TRACKER_CRF      = path.join(TRACKER_DIR, 'CRF_Tracker.xlsx');
 const TRACKER_IMPL     = path.join(TRACKER_DIR, 'Implementation_Tracker.xlsx');
 const TRACKER_TERM     = path.join(TRACKER_DIR, 'Termination_Tracker.xlsx');
@@ -271,22 +276,23 @@ function monthName(iso) {
 }
 
 function toExcelTimeFraction(val) {
-  if (val === undefined || val === null || val === '') return '';
+  if (val === undefined || val === null || val === '') return null;
   if (typeof val === 'number') {
     if (val < 1 && val > 0) return val; // already a day fraction
     return val / 24; // convert hours to day fraction
   }
   const str = String(val).trim();
-  if (!str) return '';
+  if (!str) return null;
   if (str.includes(':')) {
     const parts = str.split(':');
     const hrs = parseFloat(parts[0]) || 0;
     const mins = parseFloat(parts[1]) || 0;
-    return (hrs + mins / 60) / 24;
+    return (hrs + (mins / 60)) / 24;
   }
   const num = parseFloat(str);
   if (isNaN(num)) return str;
-  return num / 24; // hours to day fraction
+  if (num > 0 && num < 1) return num; // keep existing day fraction stored as string
+  return num / 24; // convert hours (e.g. "2" -> 2 hrs, "1.5" -> 1.5 hrs) to day fraction
 }
 
 function getRecordYear(d, fallbackIso) {
@@ -335,8 +341,8 @@ function styleCRFDataRow(dataRow, isDeleted) {
       cell.alignment = { vertical: 'top', horizontal: 'center', wrapText: false };
     }
     if ((colNum === 10 || colNum === 11 || colNum === 12) && typeof cell.value === 'number') {
-      cell.numFmt = 'h:mm';
-      cell.alignment = { vertical: 'top', horizontal: 'right', wrapText: false };
+      cell.numFmt = '[h]:mm';
+      cell.alignment = { vertical: 'top', horizontal: 'center', wrapText: false };
     }
   });
 }
@@ -649,30 +655,38 @@ async function updateTrackerExcel(type) {
   }
 }
 
-async function syncToExcel(record) {
-  // Skip syncing draft records — they have no meaningful data yet
-  if (!record || record.status === 'draft') return;
+const syncDebounceTimers = {};
 
-  // Always READ from the original template (never modify it)
-  // Write the result to the synced/ working copy
-  const templatePath = record.type === 'crf' ? TEMPLATE_CRF : TEMPLATE_IMPL_TERM;
-  const syncPath     = record.type === 'crf' ? SYNC_CRF     : SYNC_IMPL_TERM;
+function scheduleExcelSync(type) {
+  if (!type) return;
+  if (syncDebounceTimers[type]) clearTimeout(syncDebounceTimers[type]);
+  syncDebounceTimers[type] = setTimeout(() => {
+    runExcelSync(type).catch(e => console.error(`Background Excel sync (${type}) error:`, e.message));
+  }, 4000);
+}
 
+async function runExcelSync(type) {
   // Always update tracker (includes deleted records, never loses data)
-  updateTrackerExcel(record.type).catch(e => console.error('tracker update error:', e.message));
+  await updateTrackerExcel(type);
 
-  if (!fs.existsSync(templatePath)) {
-    console.warn(`syncToExcel: template not found at ${templatePath}`);
-    return;
-  }
+  const templatePath = type === 'crf' ? TEMPLATE_CRF : TEMPLATE_IMPL_TERM;
+  const syncPath     = type === 'crf' ? SYNC_CRF     : SYNC_IMPL_TERM;
+  if (!fs.existsSync(templatePath)) return;
 
   try {
-    const rowsData = buildRowsData(record.type);
-    const buffer = await populateWithXlsxPopulate(templatePath, record.type, rowsData);
-    fs.writeFileSync(syncPath, buffer);          // write to synced copy, not the original
-    console.log(`Excel synced (${record.type}): ${syncPath} — ${rowsData.length} rows written`);
+    const rowsData = buildRowsData(type);
+    let buffer;
+    if (type === 'crf') {
+      buffer = await generateCRFExcel();
+    } else {
+      buffer = await populateWithXlsxPopulate(templatePath, type, rowsData);
+    }
+    if (buffer) {
+      fs.writeFileSync(syncPath, buffer);
+      console.log(`Excel synced (${type}): ${syncPath} — ${rowsData.length} rows written`);
+    }
   } catch (err) {
-    console.error(`Failed to sync to Excel for ${record.id}:`, err.message);
+    console.error(`Failed to sync to Excel for ${type}:`, err.message);
   }
 }
 
@@ -816,7 +830,7 @@ app.post('/api/submissions', (req, res) => {
     handleSubmissionChanges(null, newRecord, tasks);
     
     const finalRec = fullRecord(db.prepare('SELECT * FROM submissions WHERE id = ?').get(id));
-    syncToExcel(finalRec).catch(e => console.error(e));
+    scheduleExcelSync(type);
     res.json(finalRec);
   } catch (e) {
     db.exec('ROLLBACK');
@@ -883,7 +897,7 @@ app.put('/api/submissions/:id', (req, res) => {
     handleSubmissionChanges(row, newSubState, tasks);
 
     const finalRec = fullRecord(db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.id));
-    syncToExcel(finalRec).catch(e => console.error(e));
+    scheduleExcelSync(row.type);
     res.json(finalRec);
   } catch (e) {
     db.exec('ROLLBACK');
@@ -897,9 +911,7 @@ app.delete('/api/submissions/:id', (req, res) => {
     const row = db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'submission not found' });
     db.prepare('UPDATE submissions SET is_deleted = 1, updated_at = ? WHERE id = ?').run(nowIso(), req.params.id);
-    const finalRec = fullRecord(db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.id));
-    finalRec.is_deleted = 1;
-    syncToExcel(finalRec).catch(e => console.error(e));
+    scheduleExcelSync(row.type);
     res.json({ ok: true });
   } catch (e) {
     console.error('Delete submission error:', e);
@@ -915,16 +927,14 @@ app.post('/api/submissions/bulk-delete', (req, res) => {
   db.exec('BEGIN');
   try {
     const delSub = db.prepare('UPDATE submissions SET is_deleted = 1, updated_at = ? WHERE id = ?');
+    const typesToSync = new Set();
     ids.forEach(id => {
+      const row = db.prepare('SELECT type FROM submissions WHERE id = ?').get(id);
+      if (row) typesToSync.add(row.type);
       delSub.run(nowIso(), id);
-      const row = db.prepare('SELECT * FROM submissions WHERE id = ?').get(id);
-      if (row) {
-        const finalRec = fullRecord(row);
-        finalRec.is_deleted = 1;
-        syncToExcel(finalRec).catch(e => console.error('syncToExcel error on bulk delete:', e));
-      }
     });
     db.exec('COMMIT');
+    typesToSync.forEach(t => scheduleExcelSync(t));
     res.json({ ok: true, count: ids.length });
   } catch (e) {
     db.exec('ROLLBACK');

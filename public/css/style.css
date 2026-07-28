@@ -318,10 +318,10 @@
 }
 
 /* ---- Notifications ---- */
-.notif-bell { position:relative; cursor:pointer; font-size:18px; color:var(--ink-soft); display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; transition:background 0.2s; }
+.notif-bell { position:relative; cursor:pointer; font-size:18px; color:var(--ink-soft); display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; transition:background 0.2s; flex-shrink:0; }
 .notif-bell:hover { background:var(--surface-alt); color:var(--ink); }
-.notif-badge { position:absolute; top:4px; right:4px; background:var(--c-analytics); color:white; font-size:9px; font-weight:bold; border-radius:10px; padding:2px 5px; line-height:1; }
-.notif-dropdown { position:absolute; top:50px; right:20px; width:320px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.12); z-index:100; display:none; flex-direction:column; max-height:400px; overflow-y:auto; }
+.notif-badge { position:absolute; top:3px; right:3px; background:var(--c-analytics); color:white; font-size:9px; font-weight:bold; border-radius:10px; padding:2px 5px; line-height:1; box-shadow:0 0 0 2px var(--surface); }
+.notif-dropdown { position:absolute; top:calc(100% + 8px); right:0; width:320px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.15); z-index:100; display:none; flex-direction:column; max-height:400px; overflow-y:auto; }
 .notif-dropdown.open { display:flex; }
 .notif-header { font-weight:700; font-size:14px; padding:12px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
 .notif-item { padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.2s; text-align:left; }
@@ -329,3 +329,10 @@
 .notif-item-title { font-weight:600; font-size:13px; color:var(--ink); margin-bottom:4px; }
 .notif-item-meta { font-size:11px; color:var(--ink-faint); }
 .notif-empty { padding:24px 16px; text-align:center; color:var(--ink-faint); font-size:13px; }
+
+@media (max-width:640px){
+  .topbar{ padding:8px 12px; gap:8px; }
+  .brand-logo{ height:26px; }
+  .save-indicator{ min-width:0; font-size:11px; }
+  .notif-dropdown{ right:-12px; width:calc(100vw - 24px); max-width:340px; }
+}

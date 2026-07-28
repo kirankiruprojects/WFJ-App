@@ -5,3 +5,4 @@ tracker/
 *.db-wal
 *.log
 .DS_Store
+scratch/
