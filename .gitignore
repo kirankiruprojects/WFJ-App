@@ -1,4 +1,7 @@
 node_modules/
 synced/
+tracker/
+*.db-shm
+*.db-wal
 *.log
 .DS_Store
