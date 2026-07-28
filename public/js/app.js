@@ -151,10 +151,23 @@
   }
   async function openSubmission(id) {
     if (!checkUnsavedChanges()) return;
-    state.current = await loadSubmission(id);
-    state.originalString = JSON.stringify(cleanSubmission(state.current));
-    state.view = state.current.type;
-    render();
+    try {
+      const sub = await loadSubmission(id);
+      if (!sub || sub.error) {
+        alert('Submission not found or already deleted.');
+        state.index = await loadIndex();
+        state.view = 'submissions';
+        state.current = null;
+        render();
+        return;
+      }
+      state.current = sub;
+      state.originalString = JSON.stringify(cleanSubmission(state.current));
+      state.view = state.current.type;
+      render();
+    } catch (err) {
+      alert('Could not open submission: ' + err.message);
+    }
   }
   async function createNew(type) {
     if (!checkUnsavedChanges()) return;
@@ -179,9 +192,17 @@
   async function removeSubmission(id, evt) {
     if (evt) evt.stopPropagation();
     if (!confirm('Delete this submission? This cannot be undone.')) return;
-    await removeSubmissionApi(id);
-    state.index = await loadIndex();
-    render();
+    try {
+      await removeSubmissionApi(id);
+      if (state.current && String(state.current.id) === String(id)) {
+        state.current = null;
+        state.view = 'submissions';
+      }
+      state.index = await loadIndex();
+      render();
+    } catch (err) {
+      alert('Delete failed: ' + err.message);
+    }
   }
 
   // ---------------- Shell ----------------
@@ -336,7 +357,10 @@
     main.querySelector('#qc-impl').addEventListener('click', () => createNew('implementation'));
     main.querySelector('#qc-submissions').addEventListener('click', () => goView('submissions'));
     main.querySelector('#qc-completed').addEventListener('click', () => goView('completed'));
-    main.querySelectorAll('[data-open]').forEach(c => c.addEventListener('click', () => openSubmission(c.dataset.open)));
+    main.querySelectorAll('[data-open]').forEach(c => c.addEventListener('click', (e) => {
+      if (e.target.closest('[data-del]')) return;
+      openSubmission(c.dataset.open);
+    }));
     main.querySelectorAll('[data-del]').forEach(c => c.addEventListener('click', (e) => removeSubmission(c.dataset.del, e)));
   }
 
@@ -790,7 +814,7 @@
       <div class="form-header">
         <div class="form-header-top">
           <div class="form-title">Client Termination Checklist</div>
-          <div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" id="save-btn">Save</button><button class="btn btn-ghost btn-sm" id="download-btn">Download .doc</button></div>
+          <div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" id="save-btn">Save</button><button class="btn btn-ghost btn-sm" id="download-btn">Download .doc</button><button class="btn btn-danger-ghost btn-sm" id="delete-btn">Delete</button></div>
         </div>
         <div class="field-grid">
           ${fieldHtml('Client', 'client', sub.client)}
@@ -810,6 +834,8 @@
     wireHeaderFields(main, sub);
     main.querySelector('#back').addEventListener('click', () => goView('submissions'));
     main.querySelector('#download-btn').addEventListener('click', () => window.open(`/api/submissions/${sub.id}/export`, '_blank'));
+    const delBtn = main.querySelector('#delete-btn');
+    if (delBtn) delBtn.addEventListener('click', (e) => removeSubmission(sub.id, e));
     wireSaveButton(main, sub);
     schema.TERMINATION_SECTIONS.forEach(sec => wireTerminationSection(main, sec));
   }
@@ -1050,7 +1076,7 @@
       <div class="form-header">
         <div class="form-header-top">
           <div class="form-title">Change Request Form (CRF)</div>
-          <div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" id="save-btn">Save</button><button class="btn btn-ghost btn-sm" id="download-btn">Download .doc</button></div>
+          <div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" id="save-btn">Save</button><button class="btn btn-ghost btn-sm" id="download-btn">Download .doc</button><button class="btn btn-danger-ghost btn-sm" id="delete-btn">Delete</button></div>
         </div>
         <div class="field-grid">
           ${fieldHtml('Reference Conversation No.', 'header.refConversation', sub.header.refConversation)}
@@ -1078,6 +1104,8 @@
     wireHeaderFields(main, sub);
     main.querySelector('#back').addEventListener('click', () => goView('submissions'));
     main.querySelector('#download-btn').addEventListener('click', () => window.open(`/api/submissions/${sub.id}/export`, '_blank'));
+    const crfDelBtn = main.querySelector('#delete-btn');
+    if (crfDelBtn) crfDelBtn.addEventListener('click', (e) => removeSubmission(sub.id, e));
     wireSaveButton(main, sub);
     wireCrfCommon(main);
   }
@@ -1092,7 +1120,7 @@
       <div class="form-header">
         <div class="form-header-top">
           <div class="form-title">Client Implementation Checklist</div>
-          <div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" id="save-btn">Save</button><button class="btn btn-ghost btn-sm" id="download-btn">Download .doc</button></div>
+          <div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" id="save-btn">Save</button><button class="btn btn-ghost btn-sm" id="download-btn">Download .doc</button><button class="btn btn-danger-ghost btn-sm" id="delete-btn">Delete</button></div>
         </div>
         <div class="field-grid">
           ${fieldHtml('Client Name', 'client', sub.client)}
@@ -1106,6 +1134,8 @@
     wireHeaderFields(main, sub);
     main.querySelector('#back').addEventListener('click', () => goView('submissions'));
     main.querySelector('#download-btn').addEventListener('click', () => window.open(`/api/submissions/${sub.id}/export`, '_blank'));
+    const implDelBtn = main.querySelector('#delete-btn');
+    if (implDelBtn) implDelBtn.addEventListener('click', (e) => removeSubmission(sub.id, e));
     wireSaveButton(main, sub);
   }
 

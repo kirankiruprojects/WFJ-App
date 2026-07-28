@@ -12,7 +12,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const PORT = process.env.PORT || 3000;
-const DOCUMENTS_DIR = 'c:\\Users\\Kiranbs\\Downloads\\workforce-junction-app\\wj-app\\Document';
+const DOCUMENTS_DIR = path.join(__dirname, 'Document');
 const DB_PATH = path.join(__dirname, 'data.db');
 
 const app = express();
@@ -917,9 +917,12 @@ app.post('/api/submissions/bulk-delete', (req, res) => {
     const delSub = db.prepare('UPDATE submissions SET is_deleted = 1, updated_at = ? WHERE id = ?');
     ids.forEach(id => {
       delSub.run(nowIso(), id);
-      const finalRec = fullRecord(db.prepare('SELECT * FROM submissions WHERE id = ?').get(id));
-      finalRec.is_deleted = 1;
-      syncToExcel(finalRec).catch(e => console.error(e));
+      const row = db.prepare('SELECT * FROM submissions WHERE id = ?').get(id);
+      if (row) {
+        const finalRec = fullRecord(row);
+        finalRec.is_deleted = 1;
+        syncToExcel(finalRec).catch(e => console.error('syncToExcel error on bulk delete:', e));
+      }
     });
     db.exec('COMMIT');
     res.json({ ok: true, count: ids.length });
