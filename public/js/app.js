@@ -212,11 +212,15 @@
           <div class="nav-item ${state.view === 'dashboard' ? 'active' : ''}" data-goto="dashboard">${navIcon('&#128202;')} Dashboard</div>
           <div class="nav-item ${state.view === 'submissions' ? 'active' : ''}" data-goto="submissions">${navIcon('&#128203;')} All Submissions<span class="nav-count">${totalCount}</span></div>
           <div class="nav-item ${state.view === 'completed' ? 'active' : ''}" data-goto="completed">${navIcon('&#9989;')} Completed<span class="nav-count">${completedCount}</span></div>
+          <div class="nav-group-label">Tools</div>
+          <div class="nav-item ${state.view === 'notifications' ? 'active' : ''}" data-goto="notifications">${navIcon('&#128276;')} Notifications</div>
+          <div class="nav-item ${state.view === 'tracker' ? 'active' : ''}" data-goto="tracker">${navIcon('&#128200;')} Tracker</div>
           <div class="nav-group-label">Create</div>
           <div class="nav-item" data-newtype="crf">${navIcon('&#9998;')} New CRF</div>
           <div class="nav-item" data-newtype="termination">${navIcon('&#9989;')} New Termination Checklist</div>
           <div class="nav-item" data-newtype="implementation">${navIcon('&#127959;')} New Implementation Checklist</div>
         </nav>
+
         <div class="main-area" id="main-area"></div>
       </div>
       ${footerHtml()}
@@ -270,6 +274,8 @@
     else if (state.view === 'dashboard') renderDashboardTable(main);
     else if (state.view === 'submissions') renderList(main, 'submissions');
     else if (state.view === 'completed') renderList(main, 'completed');
+    else if (state.view === 'notifications') renderNotifications(main);
+    else if (state.view === 'tracker') renderTracker(main);
     else if (state.view === 'termination' && state.current) { main.classList.add('narrow'); renderTermination(main); }
     else if (state.view === 'crf' && state.current) { main.classList.add('narrow'); renderCRF(main); }
     else if (state.view === 'implementation' && state.current) { main.classList.add('narrow'); renderImplementation(main); }
@@ -1321,6 +1327,258 @@
     if (catAddInput) catAddInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); catAddBtn.click(); } });
   }
 
+
+  // ---------------- Notifications ----------------
+
+  async function renderNotifications(main) {
+    main.innerHTML = `<div style="display:flex;justify-content:center;padding:60px;"><div class="spinner"></div></div>`;
+    let logs = [];
+    try {
+      logs = await api('/api/notifications');
+    } catch (e) {
+      main.innerHTML = `<div class="empty-state">Failed to load notifications: ${esc(e.message)}</div>`;
+      return;
+    }
+
+    function fmtRelTime(iso) {
+      if (!iso) return '—';
+      const diff = Date.now() - new Date(iso).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + 'm ago';
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      return Math.floor(hrs / 24) + 'd ago';
+    }
+
+    function subjectIcon(subject) {
+      if (!subject) return '📧';
+      if (subject.toLowerCase().includes('approved')) return '✅';
+      if (subject.toLowerCase().includes('testing')) return '🔍';
+      if (subject.toLowerCase().includes('completed')) return '🎉';
+      if (subject.toLowerCase().includes('assigned')) return '👤';
+      return '📧';
+    }
+
+    main.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+        <div>
+          <div style="font-weight:700;font-size:20px;font-family:'Space Grotesk',sans-serif;">Notifications — Email Activity Log</div>
+          <div class="hint">${logs.length} notification${logs.length === 1 ? '' : 's'} recorded</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="notif-search" placeholder="Search notifications…" class="form-control" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;width:240px;">
+        </div>
+      </div>
+
+      ${logs.length === 0 ? `
+        <div class="empty-state" style="padding:60px 24px;">
+          <div style="font-size:40px;margin-bottom:12px;">🔔</div>
+          <div style="font-weight:600;font-size:16px;margin-bottom:6px;">No notifications yet</div>
+          <div class="hint">Notifications appear here when status changes or tasks are assigned.</div>
+        </div>
+      ` : `
+        <div id="notif-feed" style="display:flex;flex-direction:column;gap:10px;">
+          ${logs.map(log => `
+            <div class="notif-card" data-notif-body="${esc(log.body || '')}" style="
+              background:var(--surface);border:1px solid var(--border);border-radius:12px;
+              padding:14px 18px;box-shadow:var(--shadow);cursor:pointer;
+              border-left:4px solid var(--accent);transition:box-shadow 0.15s,transform 0.12s;
+            ">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                <div style="display:flex;gap:12px;align-items:flex-start;flex:1;min-width:0;">
+                  <div style="font-size:22px;flex-shrink:0;line-height:1;">${subjectIcon(log.subject)}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;font-size:13.5px;color:var(--ink);margin-bottom:3px;">${esc(log.subject || '(no subject)')}</div>
+                    <div style="font-size:12px;color:var(--ink-soft);">To: ${esc(log.to_email || '—')}</div>
+                  </div>
+                </div>
+                <div style="font-size:11px;color:var(--ink-faint);white-space:nowrap;flex-shrink:0;">
+                  ${fmtRelTime(log.sent_at)}<br>
+                  <span style="font-size:10px;">${fmtDate(log.sent_at)}</span>
+                </div>
+              </div>
+              <div class="notif-body-preview" style="
+                display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+                font-size:12.5px;color:var(--ink-soft);white-space:pre-wrap;line-height:1.55;
+                background:var(--surface-alt);border-radius:6px;padding:10px 12px;
+              ">${esc(log.body || '')}</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    `;
+
+    // Toggle body on click
+    main.querySelectorAll('.notif-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const preview = card.querySelector('.notif-body-preview');
+        if (preview) {
+          const isOpen = preview.style.display !== 'none';
+          preview.style.display = isOpen ? 'none' : 'block';
+          card.style.boxShadow = isOpen ? '' : '0 4px 18px rgba(108,92,231,0.15)';
+          card.style.transform = isOpen ? '' : 'translateY(-1px)';
+        }
+      });
+    });
+
+    // Search filter
+    const searchInput = main.querySelector('#notif-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value.toLowerCase();
+        main.querySelectorAll('.notif-card').forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(q) ? '' : 'none';
+        });
+      });
+    }
+  }
+
+  // ---------------- Tracker (read-only) ----------------
+
+  async function renderTracker(main) {
+    main.innerHTML = `<div style="display:flex;justify-content:center;padding:60px;"><div class="spinner"></div></div>`;
+    let data = { crf: [], implementation: [], termination: [] };
+    try {
+      data = await api('/api/tracker/data');
+    } catch (e) {
+      main.innerHTML = `<div class="empty-state">Failed to load tracker data: ${esc(e.message)}</div>`;
+      return;
+    }
+
+    const activeTab = state.trackerTab || 'crf';
+
+    function trackerTabBtn(key, label, count) {
+      return `<button class="tracker-tab-btn ${activeTab === key ? 'active' : ''}" data-ttab="${key}" style="
+        padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
+        border:1px solid var(--border);background:${activeTab === key ? 'var(--accent)' : 'var(--surface)'};
+        color:${activeTab === key ? '#fff' : 'var(--ink-soft)'};transition:all 0.15s;
+      ">${label} <span style="font-size:11px;opacity:0.75;">(${count})</span></button>`;
+    }
+
+    function statusPill(status, is_deleted) {
+      if (is_deleted) return `<span style="background:#FFDAD6;color:#C00000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">DELETED</span>`;
+      const cls = status || 'requested';
+      return `<span class="stagepill-table stage-${cls}">${stageLabelOf(cls)}</span>`;
+    }
+
+    function fmtD(d) { return d ? fmtDate(d) : '—'; }
+
+    let tableHtml = '';
+    if (activeTab === 'crf') {
+      const rows = data.crf;
+      tableHtml = rows.length === 0 ? `<div class="empty-state">No CRF records found.</div>` : `
+        <div style="overflow-x:auto;">
+          <table class="data-table tracker-ro-table">
+            <thead><tr>
+              <th>Month</th><th>Client</th><th>Broker</th>
+              <th>Category</th><th>Config Analyst</th><th>Testing Analyst</th>
+              <th>Impl. Manager</th><th>Completed</th><th>Billable</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              ${rows.map(r => `<tr style="${r.is_deleted ? 'opacity:0.6;text-decoration:line-through;background:#FFF9E6;' : ''}">
+                <td>${esc(r.month)}</td>
+                <td style="font-weight:600;">${esc(r.client || 'Untitled')}</td>
+                <td>${esc(r.broker || '—')}</td>
+                <td>${esc(r.category || '—')}</td>
+                <td>${esc(r.configAnalyst || '—')}</td>
+                <td>${esc(r.testingAnalyst || '—')}</td>
+                <td>${esc(r.implementationManager || '—')}</td>
+                <td>${fmtD(r.completedDate)}</td>
+                <td>${esc(r.billable || '—')}</td>
+                <td>${statusPill(r.status, r.is_deleted)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else if (activeTab === 'implementation') {
+      const rows = data.implementation;
+      tableHtml = rows.length === 0 ? `<div class="empty-state">No Implementation records found.</div>` : `
+        <div style="overflow-x:auto;">
+          <table class="data-table tracker-ro-table">
+            <thead><tr>
+              <th>#</th><th>Client</th><th>Broker</th>
+              <th>Design Guide Received</th><th>Impl. Completion</th>
+              <th>Client Go-Live</th><th>Headcount</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              ${rows.map((r, i) => `<tr style="${r.is_deleted ? 'opacity:0.6;text-decoration:line-through;background:#FFF9E6;' : ''}">
+                <td style="color:var(--ink-faint);">${i + 1}</td>
+                <td style="font-weight:600;">${esc(r.client || 'Untitled')}</td>
+                <td>${esc(r.broker || '—')}</td>
+                <td>${fmtD(r.designGuideReceived)}</td>
+                <td>${fmtD(r.implementationCompletion)}</td>
+                <td>${fmtD(r.clientGoLive)}</td>
+                <td>${esc(r.headcount || '—')}</td>
+                <td>${statusPill(r.status, r.is_deleted)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else {
+      const rows = data.termination;
+      tableHtml = rows.length === 0 ? `<div class="empty-state">No Termination records found.</div>` : `
+        <div style="overflow-x:auto;">
+          <table class="data-table tracker-ro-table">
+            <thead><tr>
+              <th>#</th><th>Client</th><th>Broker</th>
+              <th>Termination Date</th><th>EE Headcount</th><th>Reason</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              ${rows.map((r, i) => `<tr style="${r.is_deleted ? 'opacity:0.6;text-decoration:line-through;background:#FFF9E6;' : ''}">
+                <td style="color:var(--ink-faint);">${i + 1}</td>
+                <td style="font-weight:600;">${esc(r.client || 'Untitled')}</td>
+                <td>${esc(r.broker || '—')}</td>
+                <td>${fmtD(r.terminationDate)}</td>
+                <td>${esc(r.headcount || '—')}</td>
+                <td style="max-width:220px;white-space:normal;">${esc(r.reason || '—')}</td>
+                <td>${statusPill(r.status, r.is_deleted)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    main.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+        <div>
+          <div style="font-weight:700;font-size:20px;font-family:'Space Grotesk',sans-serif;">Tracker — View-Only Records</div>
+          <div class="hint">All records including deleted (shown with strikethrough). No editing from this view.</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <a href="/api/export-excel/crf" target="_blank" class="btn btn-ghost btn-sm">⬇ Download CRF Excel</a>
+          <a href="/api/export-excel/implementation" target="_blank" class="btn btn-ghost btn-sm">⬇ Download Impl. Excel</a>
+          <a href="/api/export-excel/termination" target="_blank" class="btn btn-ghost btn-sm">⬇ Download Term. Excel</a>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+        ${trackerTabBtn('crf', '📋 Change Requests', data.crf.length)}
+        ${trackerTabBtn('implementation', '🏗 Implementation', data.implementation.length)}
+        ${trackerTabBtn('termination', '📤 Termination', data.termination.length)}
+      </div>
+
+      <div style="background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:16px;">👁</span>
+        <span style="font-size:12.5px;color:var(--ink-soft);">This is a <strong>view-only</strong> snapshot. Deleted records are highlighted in yellow with strikethrough. Use the Download buttons to export the full Excel tracker file.</span>
+      </div>
+
+      <div id="tracker-table-area">
+        ${tableHtml}
+      </div>
+    `;
+
+    main.querySelectorAll('[data-ttab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.trackerTab = btn.dataset.ttab;
+        renderTracker(main);
+      });
+    });
+  }
 
   // ---------------- Admin ----------------
   let isAdminAuthenticated = false;

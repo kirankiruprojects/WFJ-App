@@ -893,11 +893,18 @@ app.put('/api/submissions/:id', (req, res) => {
 });
 
 app.delete('/api/submissions/:id', (req, res) => {
-  db.prepare('UPDATE submissions SET is_deleted = 1, updated_at = ? WHERE id = ?').run(nowIso(), req.params.id);
-  const finalRec = fullRecord(db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.id));
-  finalRec.is_deleted = 1;
-  syncToExcel(finalRec).catch(e => console.error(e));
-  res.json({ ok: true });
+  try {
+    const row = db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'submission not found' });
+    db.prepare('UPDATE submissions SET is_deleted = 1, updated_at = ? WHERE id = ?').run(nowIso(), req.params.id);
+    const finalRec = fullRecord(db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.id));
+    finalRec.is_deleted = 1;
+    syncToExcel(finalRec).catch(e => console.error(e));
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Delete submission error:', e);
+    res.status(500).json({ error: 'failed to delete submission: ' + e.message });
+  }
 });
 
 // ---------- Batch / Bulk Deletes ----------
@@ -1021,6 +1028,58 @@ app.get('/api/admin/emails', (req, res) => {
   try {
     const logs = db.prepare('SELECT * FROM email_logs ORDER BY sent_at DESC').all();
     res.json(logs);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- API: Notifications (email log for Notifications tab) ----------
+
+app.get('/api/notifications', (req, res) => {
+  try {
+    const logs = db.prepare('SELECT * FROM email_logs ORDER BY sent_at DESC LIMIT 100').all();
+    res.json(logs);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- API: Tracker data (read-only summary for Tracker tab) ----------
+
+app.get('/api/tracker/data', (req, res) => {
+  try {
+    const crfRows = db.prepare("SELECT id, client, broker, status, is_deleted, created_at, updated_at, header_json, body_json FROM submissions WHERE type = 'crf' AND status != 'draft' ORDER BY created_at DESC").all().map(r => {
+      const h = safeParse(r.header_json, {});
+      const b = safeParse(r.body_json, {});
+      const req_ = b.request || {}; const tr = b.tracking || {};
+      return {
+        id: r.id, client: r.client, broker: r.broker, status: r.status, is_deleted: r.is_deleted,
+        month: monthName(req_.dateOfRequest || r.created_at),
+        requestDate: req_.dateOfRequest || '', category: tr.category || '',
+        configAnalyst: tr.configAnalyst || '', testingAnalyst: tr.testingAnalyst || '',
+        implementationManager: tr.implementationManager || '',
+        completedDate: h.completedOn || '', billable: tr.billable || '',
+        createdAt: r.created_at, updatedAt: r.updated_at
+      };
+    });
+    const implRows = db.prepare("SELECT id, client, broker, status, is_deleted, created_at, updated_at, header_json FROM submissions WHERE type = 'implementation' AND status != 'draft' ORDER BY created_at DESC").all().map(r => {
+      const h = safeParse(r.header_json, {});
+      return {
+        id: r.id, client: r.client, broker: r.broker, status: r.status, is_deleted: r.is_deleted,
+        designGuideReceived: h.designGuideReceived || '', implementationCompletion: h.implementationCompletion || '',
+        clientGoLive: h.clientGoLive || '', headcount: h.headcount || '',
+        createdAt: r.created_at, updatedAt: r.updated_at
+      };
+    });
+    const termRows = db.prepare("SELECT id, client, broker, status, is_deleted, created_at, updated_at, header_json FROM submissions WHERE type = 'termination' AND status != 'draft' ORDER BY created_at DESC").all().map(r => {
+      const h = safeParse(r.header_json, {});
+      return {
+        id: r.id, client: r.client, broker: r.broker, status: r.status, is_deleted: r.is_deleted,
+        terminationDate: h.requestedDate || '', headcount: h.eeHeadcount || '', reason: h.reason || '',
+        createdAt: r.created_at, updatedAt: r.updated_at
+      };
+    });
+    res.json({ crf: crfRows, implementation: implRows, termination: termRows });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
