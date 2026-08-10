@@ -364,16 +364,18 @@
           <div id="global-search-results" class="global-search-results"></div>
         </div>
 
-        <div class="notif-bell" id="notif-bell" title="Notifications">
-          &#128276;
-          <div class="notif-badge" id="notif-badge" style="display:none;">0</div>
-          <div class="notif-dropdown" id="notif-dropdown">
-            <div class="notif-header">Recent Requests <span style="font-size:11px;font-weight:400;color:var(--ink-soft);cursor:pointer;" id="notif-clear">Dismiss All</span></div>
-            <div id="notif-list"></div>
+        <div class="topbar-right-actions" style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <div class="notif-bell" id="notif-bell" title="Notifications">
+            🔔
+            <div class="notif-badge" id="notif-badge" style="display:none;">0</div>
+            <div class="notif-dropdown" id="notif-dropdown">
+              <div class="notif-header">Recent Requests <span style="font-size:11px;font-weight:400;color:var(--ink-soft);cursor:pointer;" id="notif-clear">Dismiss All</span></div>
+              <div id="notif-list"></div>
+            </div>
           </div>
+          <div class="save-indicator" id="save-indicator"></div>
+          <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
         </div>
-        <div class="save-indicator" id="save-indicator"></div>
-        <button class="mobile-menu-btn" id="mobile-menu-btn">&#9776;</button>
       </header>
 
       <div class="mobile-nav-drawer" id="mobile-nav-drawer">
