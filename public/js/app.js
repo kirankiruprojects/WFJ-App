@@ -1176,7 +1176,6 @@
 
         <!-- HERO BANNER -->
         <div class="home-hero-banner">
-          <div style="position:absolute;top:-40px;right:280px;width:240px;height:240px;background:rgba(255,255,255,.4);border-radius:50%;pointer-events:none;"></div>
           <div style="flex:1;z-index:1;">
             <div style="font-size:15px;font-weight:600;color:#2563eb;margin-bottom:6px;letter-spacing:0.3px;">${greeting}</div>
             <div style="font-size:32px;font-weight:800;color:#1e293b;font-family:'Space Grotesk',sans-serif;line-height:1.2;margin-bottom:10px;">Welcome to Workforce Junction</div>
@@ -1188,10 +1187,6 @@
                 View My Tasks 📋 (${totalCount})
               </button>
             </div>
-          </div>
-          <div style="flex-shrink:0;z-index:1;display:flex;align-items:center;justify-content:center;">
-            <img class="home-hero-image" src="images/dashboard_preview.png" alt="Dashboard Preview"
-              onerror="this.style.display='none'">
           </div>
         </div>
 
@@ -1343,23 +1338,23 @@
         <div class="home-bottom-grid">
 
           <!-- LEFT: Recent Activity Table -->
-          <div class="mockup-card" style="padding:24px;border-radius:18px;border:1px solid #e2e8f0;background:#ffffff;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="mockup-card" style="padding:20px 24px;border-radius:18px;border:1px solid #e2e8f0;background:#ffffff;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
               <div style="font-size:16px;font-weight:700;color:#1e293b;">⚡ Recent Submissions</div>
               <button id="view-all-activity-btn" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">View All →</button>
             </div>
             ${recentActivity.length === 0 ? `
               <div style="text-align:center;padding:40px;color:#94a3b8;font-size:13.5px;">No active submissions found.</div>
             ` : `
-              <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:440px;">
                   <thead>
                     <tr style="border-bottom:1px solid #e2e8f0;text-align:left;">
-                      <th style="padding:10px 12px;color:#64748b;font-weight:600;">Type</th>
-                      <th style="padding:10px 12px;color:#64748b;font-weight:600;">Client</th>
-                      <th style="padding:10px 12px;color:#64748b;font-weight:600;">Broker</th>
-                      <th style="padding:10px 12px;color:#64748b;font-weight:600;">Status</th>
-                      <th style="padding:10px 12px;color:#64748b;font-weight:600;text-align:right;">Action</th>
+                      <th style="padding:10px 12px;color:#64748b;font-weight:600;white-space:nowrap;">Type</th>
+                      <th style="padding:10px 12px;color:#64748b;font-weight:600;white-space:nowrap;">Client</th>
+                      <th style="padding:10px 12px;color:#64748b;font-weight:600;white-space:nowrap;">Broker</th>
+                      <th style="padding:10px 12px;color:#64748b;font-weight:600;white-space:nowrap;">Status</th>
+                      <th style="padding:10px 12px;color:#64748b;font-weight:600;text-align:right;white-space:nowrap;">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1371,10 +1366,10 @@
                             <span>${typeLabelOf(r.type)}</span>
                           </span>
                         </td>
-                        <td style="padding:10px 12px;font-weight:700;color:#0f172a;">${esc(r.client || 'Untitled')}</td>
-                        <td style="padding:10px 12px;color:#64748b;">${esc(r.broker || '—')}</td>
-                        <td style="padding:10px 12px;">${statusPill(r.status)}</td>
-                        <td style="padding:10px 12px;text-align:right;">
+                        <td style="padding:10px 12px;font-weight:700;color:#0f172a;white-space:nowrap;">${esc(r.client || 'Untitled')}</td>
+                        <td style="padding:10px 12px;color:#64748b;white-space:nowrap;">${esc(r.broker || '—')}</td>
+                        <td style="padding:10px 12px;white-space:nowrap;">${statusPill(r.status)}</td>
+                        <td style="padding:10px 12px;text-align:right;white-space:nowrap;">
                           <button style="font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;cursor:pointer;">Open →</button>
                         </td>
                       </tr>
