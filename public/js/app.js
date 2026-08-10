@@ -356,15 +356,18 @@
 
         <div class="topbar-spacer"></div>
 
-        <div class="global-search-wrap">
-          <span class="global-search-icon">🔍</span>
-          <input type="text" id="global-search-input" class="global-search-input"
-                placeholder="Search client, broker, conversation #, status...">
-          <span class="global-search-kbd">⌘K</span>
-          <div id="global-search-results" class="global-search-results"></div>
-        </div>
+        <div class="topbar-right-actions">
 
-        <div class="topbar-right-actions" style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <!-- Search Bar Component -->
+          <div class="global-search-wrap">
+            <span class="global-search-icon">🔍</span>
+            <input type="text" id="global-search-input" class="global-search-input"
+                  placeholder="Search client, broker...">
+            <span class="global-search-kbd">⌘K</span>
+            <div id="global-search-results" class="global-search-results"></div>
+          </div>
+
+          <!-- Notification Bell Component -->
           <div class="notif-bell" id="notif-bell" title="Notifications">
             🔔
             <div class="notif-badge" id="notif-badge" style="display:none;">0</div>
@@ -373,6 +376,7 @@
               <div id="notif-list"></div>
             </div>
           </div>
+
           <div class="save-indicator" id="save-indicator"></div>
           <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
         </div>
