@@ -1175,7 +1175,7 @@
       <div style="display:flex;flex-direction:column;gap:26px;padding-bottom:32px;">
 
         <!-- HERO BANNER -->
-        <div style="background:linear-gradient(135deg, #eef4ff 0%, #e0ebff 50%, #dbe7ff 100%);border:1px solid #c7d9fe;border-radius:24px;padding:32px 38px;display:flex;align-items:center;justify-content:space-between;gap:28px;box-shadow:0 6px 20px rgba(37,99,235,0.06);position:relative;overflow:hidden;min-height:170px;">
+        <div class="home-hero-banner">
           <div style="position:absolute;top:-40px;right:280px;width:240px;height:240px;background:rgba(255,255,255,.4);border-radius:50%;pointer-events:none;"></div>
           <div style="flex:1;z-index:1;">
             <div style="font-size:15px;font-weight:600;color:#2563eb;margin-bottom:6px;letter-spacing:0.3px;">${greeting}</div>
@@ -1190,14 +1190,13 @@
             </div>
           </div>
           <div style="flex-shrink:0;z-index:1;display:flex;align-items:center;justify-content:center;">
-            <img src="C:\Users\Kiranbs\Downloads\workforce-junction-app\workforce-junction-app\wj-app\Images\Picture.jpeg" alt="Dashboard Preview"
-              style="height:155px;width:250px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.12);border:2px solid #ffffff;object-fit:contain;background:#ffffff;"
+            <img class="home-hero-image" src="images/dashboard_preview.png" alt="Dashboard Preview"
               onerror="this.style.display='none'">
           </div>
         </div>
 
         <!-- 5 METRIC CARDS ROW (Clickable to view full details) -->
-        <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:16px;">
+        <div class="home-metrics-grid">
           <!-- 1. My Tasks -->
           <div class="mockup-card metric-card-btn" data-filter-to="all" style="padding:18px 20px;border-radius:16px;border:1px solid #e2e8f0;background:#ffffff;cursor:pointer;transition:all .2s ease;"
                onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.06)'"
@@ -1285,7 +1284,7 @@
             <span>💼 Workspaces</span>
             <span style="font-size:12px;font-weight:600;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:12px;">4 Active Modules</span>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:16px;">
+          <div class="home-workspaces-grid">
             <!-- CRF Card -->
             <div class="mockup-card" style="padding:22px;border-radius:18px;border:1px solid #e2e8f0;background:#ffffff;cursor:pointer;transition:all .2s ease;"
                  onclick="openModule('crf')"
@@ -1341,7 +1340,7 @@
         </div>
 
         <!-- 3-COLUMN BOTTOM LAYOUT -->
-        <div style="display:grid;grid-template-columns: 2fr 1fr 1fr;gap:20px;align-items:start;">
+        <div class="home-bottom-grid">
 
           <!-- LEFT: Recent Activity Table -->
           <div class="mockup-card" style="padding:24px;border-radius:18px;border:1px solid #e2e8f0;background:#ffffff;">
