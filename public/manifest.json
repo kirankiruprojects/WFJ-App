@@ -1,0 +1,43 @@
+{
+  "name": "Workforce Junction",
+  "short_name": "WFJ",
+  "description": "CRF & Client Termination Checklist Workspace — Workforce Junction",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#6c63ff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New CRF",
+      "short_name": "CRF",
+      "description": "Create a new CRF request",
+      "url": "/?tab=crf",
+      "icons": [{ "src": "/images/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "New Termination",
+      "short_name": "Termination",
+      "description": "Create a new termination request",
+      "url": "/?tab=termination",
+      "icons": [{ "src": "/images/logo.png", "sizes": "96x96" }]
+    }
+  ]
+}

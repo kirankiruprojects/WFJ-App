@@ -2,9 +2,35 @@
   "name": "workforce-junction-app",
   "version": "1.1.0",
   "description": "Workforce Junction - CRF & Client Termination Checklist workspace (Express + SQLite)",
-  "main": "server.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node --max-old-space-size=256 server.js"
+    "start": "node --max-old-space-size=256 server.js",
+    "electron": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.workforcejunction.app",
+    "productName": "Workforce Junction",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "server.js",
+      "schema.js",
+      "index.html",
+      "public/**/*",
+      "node_modules/**/*",
+      "data.db"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/images/logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "adm-zip": "^0.6.0",
@@ -17,5 +43,9 @@
   },
   "engines": {
     "node": ">=22.5.0"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
   }
 }

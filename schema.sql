@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS submissions (
   id           TEXT PRIMARY KEY,
-  type         TEXT NOT NULL CHECK(type IN ('termination','crf','implementation')),
+  type         TEXT NOT NULL CHECK(type IN ('termination','crf','implementation','open_enrollment')),
   client       TEXT DEFAULT '',
   broker       TEXT DEFAULT '',
   status       TEXT NOT NULL DEFAULT 'requested' CHECK(status IN ('draft','requested','approved','testing','completed')),

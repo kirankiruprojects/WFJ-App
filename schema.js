@@ -70,7 +70,25 @@ const CATEGORY_MATRIX = [
 
 // Flat list of category names, used for the single "Category" dropdown on the
 // Tracking & Metrics section (matches the client's Master Tracker "Category" column).
-const CATEGORY_OPTIONS = CATEGORY_MATRIX.flatMap(g => g.items.map(it => it.label));
+const CATEGORY_OPTIONS = [
+  'Plan Configuration', 
+  'Client Setup', 
+  'Benefit Changes', 
+  'System Enhancement',
+  'CLDD — EDI Structure',
+  'CLDD — Deductions',
+  'CLDD — Billing',
+  'Plan Rules',
+  'Rates',
+  'Data Fix',
+  'Reports',
+  'Setup',
+  'Notifications',
+  'Process',
+  'EDI (non-CLDD changes)',
+  'New Feature',
+  'Other'
+];
 
 // Tracking & Metrics fields — these map directly to the columns in the client's
 // "CRF Config Master Tracker" spreadsheet, so the Excel export/import round-trips cleanly.
@@ -104,6 +122,34 @@ const TERMINATION_EXTRA_FIELDS = [
   { key: 'eeHeadcount', label: 'EE Headcount', type: 'text' },
 ];
 
+const OPEN_ENROLLMENT_FIELDS = [
+  // Section 1: Client & Analyst
+  { key: 'configAnalyst', label: 'Config Analyst', type: 'text' },
+  // Section 2: OE Timeline & Key Dates
+  { key: 'oeDocReceivedDate', label: 'OE Renewal Doc Received Date', type: 'date' },
+  { key: 'oeStartDate', label: 'OE Start Date', type: 'date' },
+  { key: 'oeEndDate', label: 'OE End Date', type: 'date' },
+  { key: 'oeEffectiveDate', label: 'OE Effective Date', type: 'date' },
+  // Section 3: OE Type & Configuration
+  { key: 'typeOfOe', label: 'Type of OE', type: 'select', options: ['Active', 'Passive', 'Active+Passive'] },
+  { key: 'listOrWorkflow', label: 'List / Work Flow OE', type: 'select', options: ['List', 'WorkFlow'] },
+  { key: 'activePlans', label: 'Plans with Active OE', type: 'text' },
+  { key: 'passivePlans', label: 'Plans with Passive OE', type: 'text' },
+  // Section 4: Setup & Testing Status
+  { key: 'setupStatus', label: 'OE Setup Status', type: 'select', options: ['Completed', 'Inprogress', 'Pending', 'NA'] },
+  { key: 'testingStatus', label: 'OE Review / Testing Status', type: 'select', options: ['Completed', 'Both Completed', 'Testing - Inprogress', 'Pending', 'NA'] },
+  { key: 'finalizationRulesStatus', label: 'OE Finalization Rules Status', type: 'select', options: ['Received', 'Confirmation Yet to Receive', 'NA'] },
+  { key: 'finalizationStartEndDate', label: 'OE Finalization Start & End Date', type: 'text' },
+  // Section 5: Communications
+  { key: 'announcementSentBy', label: 'OE Announcement Email Sent By', type: 'select', options: ['Implementation Team', 'Configuration Team', 'Client', 'NA'] },
+  { key: 'reminderFrequency', label: 'OE Reminder Email Frequency', type: 'select', options: ['Daily', 'Weekly', 'Every Two Weeks', 'Monthly', 'On Particular Dates', 'Not Required', 'NA'] },
+  { key: 'confirmationEmails', label: 'OE Confirmation Emails', type: 'text' },
+  // Section 6: Closure & Notes
+  { key: 'closure', label: 'OE Closure', type: 'select', options: ['Completed', 'Inprogress', 'Pending', 'NA'] },
+  { key: 'comments', label: 'HGS Comments / Notes', type: 'textarea' }
+];
+
 if (typeof module !== 'undefined') {
-  module.exports = { TERMINATION_SECTIONS, CRF_SECTIONS, CATEGORY_MATRIX, CATEGORY_OPTIONS, TRACKING_FIELDS, TEAM_NAMES, IMPLEMENTATION_FIELDS, TERMINATION_EXTRA_FIELDS };
+  module.exports = { TERMINATION_SECTIONS, CRF_SECTIONS, CATEGORY_MATRIX, CATEGORY_OPTIONS, TRACKING_FIELDS, TEAM_NAMES, IMPLEMENTATION_FIELDS, TERMINATION_EXTRA_FIELDS, OPEN_ENROLLMENT_FIELDS };
 }
+
