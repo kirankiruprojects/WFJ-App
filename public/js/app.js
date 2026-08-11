@@ -346,7 +346,7 @@
         
         <nav class="top-header-nav">
           <div class="nav-tab ${activeView === 'home' ? 'active' : ''}" data-goto="home">Home</div>
-          <div class="nav-tab ${activeView === 'crf' ? 'active' : ''}" data-goto="crf">Change Requests (CRF)</div>
+          <div class="nav-tab ${activeView === 'crf' ? 'active' : ''}" data-goto="crf">Change Requests</div>
           <div class="nav-tab ${activeView === 'open_enrollment' ? 'active' : ''}" data-goto="open_enrollment">Open Enrollment</div>
           <div class="nav-tab ${activeView === 'termination' ? 'active' : ''}" data-goto="termination">Termination</div>
           <div class="nav-tab ${activeView === 'implementation' ? 'active' : ''}" data-goto="implementation">Implementation</div>
@@ -366,6 +366,9 @@
             <span class="global-search-kbd">⌘K</span>
             <div id="global-search-results" class="global-search-results"></div>
           </div>
+
+          <!-- Divider between Search & Bell -->
+          <div class="topbar-divider"></div>
 
           <!-- Notification Bell Component -->
           <div class="notif-bell" id="notif-bell" title="Notifications">
